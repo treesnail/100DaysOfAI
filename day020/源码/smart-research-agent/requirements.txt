@@ -1,0 +1,15 @@
+# 运行时依赖
+pydantic>=2.0
+pydantic-settings>=2.0
+python-dotenv>=1.0.0
+openai>=1.0
+mcp>=1.20
+
+# 开发依赖
+ruff>=0.6.0
+black>=24.0
+mypy>=1.11.0
+pre-commit>=3.8.0
+pytest>=8.0
+pytest-cov>=5.0
+pytest-asyncio>=0.24

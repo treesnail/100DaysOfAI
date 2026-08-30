@@ -1,0 +1,25 @@
+# SmartResearch MCP Server 编排配置（Compose v2，无需 version 字段）
+services:
+  mcp-server:
+    # 从当前目录的 Dockerfile 构建镜像
+    build: .
+    image: smart-research-mcp:dev
+    container_name: smart-research-mcp
+    # 宿主机 8000 → 容器 8000，宿主机的请求由此进入容器
+    ports:
+      - "8000:8000"
+    # 环境变量注入：覆盖 Dockerfile 中的 ENV 默认值
+    environment:
+      MCP_TRANSPORT: sse
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8000
+      LOG_LEVEL: INFO
+    # 健康检查：与 Dockerfile 的 HEALTHCHECK 等价，compose 层声明优先级更高
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # 重启策略：进程崩溃或机器重启后自动拉起，除非被手动 stop
+    restart: unless-stopped

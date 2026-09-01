@@ -2,7 +2,7 @@
 
 今天是 **R1 复习缓冲日**（M1 ~ M2 阶段复习），**不新增代码**，因此本目录不存放代码快照。
 
-最新完整代码快照请见：[../../day023/源码/smart-research-agent/](../../day023/源码/smart-research-agent/)（M2-D7 的最终状态，包含 Agent 内核与 MCP Server/Client 的完整实现与测试）。
+最新完整代码快照请见：[../../day023/源码/smart-research-agent/](../../day023/源码/smart-research-agent/)（M2-D7 的最终状态，包含 Agent 内核与 MCP Server/Client 的完整实现与测试）。day020 起快照为累积式，包含截至当天全部模块。
 
 今天的学习材料：
 

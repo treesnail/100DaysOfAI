@@ -3,6 +3,7 @@ pydantic>=2.0
 pydantic-settings>=2.0
 python-dotenv>=1.0.0
 openai>=1.0
+langgraph==1.2.11
 
 # 开发依赖
 ruff>=0.6.0

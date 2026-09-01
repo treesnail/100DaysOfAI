@@ -1,7 +1,6 @@
-"""MCP Server/Client 子包：协议模型、FastMCP 服务与 stdio 客户端.
+"""smart_research_agent 自建的 MCP 相关包.
 
-注意：包名固定为 ``smart_research_agent.mcp_server``，绝不能命名为 ``mcp``，
-否则会遮蔽官方 ``mcp`` 包导致 import 冲突。
+注意：包名绝不能叫 ``mcp``，否则会遮蔽官方 ``mcp`` 包。
 """
 
 from smart_research_agent.mcp_server.protocol import (

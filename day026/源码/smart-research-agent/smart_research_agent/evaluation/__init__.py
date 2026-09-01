@@ -1,23 +1,20 @@
-"""评估模块：Prompt 质量评估与通用评估基座."""
+"""评估框架：EvaluationHarness 基类、数据模型、Agent 评估实现与运行指标聚合."""
 
-from smart_research_agent.evaluation.harness import CaseResult, EvalCase, EvaluationHarness
-from smart_research_agent.evaluation.prompt_eval import (
-    ComparisonResult,
-    PromptEvalHarness,
-    PromptEvaluator,
-    PromptScore,
-    RuleReport,
-    parse_judge_output,
+from __future__ import annotations
+
+from smart_research_agent.evaluation.agent_harness import AgentEvalHarness
+from smart_research_agent.evaluation.harness import (
+    CaseResult,
+    EvalCase,
+    EvaluationHarness,
 )
+from smart_research_agent.evaluation.metrics import MetricsTracker, RunRecord
 
 __all__ = [
+    "AgentEvalHarness",
     "CaseResult",
-    "ComparisonResult",
     "EvalCase",
     "EvaluationHarness",
-    "PromptEvalHarness",
-    "PromptEvaluator",
-    "PromptScore",
-    "RuleReport",
-    "parse_judge_output",
+    "MetricsTracker",
+    "RunRecord",
 ]

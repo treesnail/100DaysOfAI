@@ -4,6 +4,8 @@
 
 当前最新代码快照见 [../../day027/源码/smart-research-agent/](../../day027/源码/smart-research-agent/)（M3-D3 输出质量评估完成后的完整快照）。
 
+三天的源码快照均为**累积式**：day027 的快照已包含 day025、day026 的全部代码与测试，走读时以 day027 快照为主即可。
+
 本日复习涉及的三天代码：
 
 - day025（M3-D1 评估指标与 Harness 框架）：[../../day025/源码/smart-research-agent/smart_research_agent/evaluation/](../../day025/源码/smart-research-agent/smart_research_agent/evaluation/)

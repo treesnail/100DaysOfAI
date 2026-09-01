@@ -25,7 +25,8 @@ dependencies = [
     "pydantic-settings>=2.0",
     "python-dotenv>=1.0.0",
     "openai>=1.0",
-    "mcp>=1.29",
+    "langgraph==1.2.11",
+    "mcp==1.29.1",
 ]
 
 [project.optional-dependencies]
@@ -35,7 +36,7 @@ dev = [
     "mypy>=1.11.0",
     "pre-commit>=3.8.0",
     "pytest>=8.0",
-    "pytest-asyncio>=1.0",
+    "pytest-asyncio==1.4.0",
     "pytest-cov>=5.0",
 ]
 
@@ -73,9 +74,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-# auto 模式下 async def 测试函数无需手动加 @pytest.mark.asyncio
-asyncio_mode = "auto"
 addopts = "-v --cov=smart_research_agent --cov-report=term-missing --cov-report=html --cov-branch"
+# day017 起引入 async 测试（MCP 内存会话），auto 模式免加 @pytest.mark.asyncio
+asyncio_mode = "auto"
 
 [tool.coverage.run]
 branch = true

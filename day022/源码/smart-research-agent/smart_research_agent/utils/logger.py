@@ -1,4 +1,4 @@
-"""日志工具：基于标准 logging 模块，支持控制台与滚动文件输出."""
+"""日志工具：基于标准 logging 模块，控制台走 stderr，另支持滚动文件输出."""
 
 from __future__ import annotations
 
@@ -35,8 +35,10 @@ def get_logger(name: str) -> logging.Logger:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # 控制台输出
-    console_handler = logging.StreamHandler(sys.stdout)
+    # 控制台输出走 stderr 而非 stdout：
+    # stdout 是"程序的标准输出通道"（如 MCP stdio 传输的 JSON-RPC 管道），
+    # 日志混入会让协议解析失败；诊断信息按惯例归属 stderr。
+    console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 

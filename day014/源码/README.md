@@ -4,6 +4,8 @@
 
 当前最新代码快照见 [../../day013/源码/smart-research-agent/](../../day013/源码/smart-research-agent/)。
 
+> 说明：day011~day013 的源码快照均为累积式——每天的快照包含截至当天的全部模块。因此 day013 快照里已包含 day011 的反思模块与 day012 的多 Agent 模块，下面第 4~6 项可直接在同一份快照中走读。
+
 建议配合 [../教程/教程.md](../教程/教程.md) 第六章的"完整架构串讲"做代码走读，推荐顺序：
 
 1. `smart_research_agent/memory/short_term.py`、`memory/session.py`（day008，短期记忆与会话隔离）

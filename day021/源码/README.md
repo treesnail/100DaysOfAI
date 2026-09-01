@@ -2,7 +2,7 @@
 
 复习日无新增代码。
 
-当前最新代码快照见 [../../day020/源码/smart-research-agent/](../../day020/源码/smart-research-agent/)（M2-D5 MCP Client 集成完成后的完整项目）。
+当前最新代码快照见 [../../day020/源码/smart-research-agent/](../../day020/源码/smart-research-agent/)（M2-D5 MCP Client 集成完成后的完整项目）。day020 起快照为累积式，包含截至当天全部模块。
 
 建议配合 [../教程/教程.md](../教程/教程.md) 第七章的"代码走读路线"做复盘，推荐顺序：
 

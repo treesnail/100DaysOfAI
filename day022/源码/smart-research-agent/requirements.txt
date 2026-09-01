@@ -1,9 +1,10 @@
 # 运行时依赖（与开发环境 venv 中验证过的版本保持一致）
-# Docker 镜像只安装本文件的运行时部分；langgraph 未被 MCP Server 使用，不引入
+# Docker 镜像只安装本文件的运行时部分
 pydantic==2.13.5
 pydantic-settings>=2.0
 python-dotenv>=1.0.0
 openai>=1.0
+langgraph==1.2.11
 mcp==1.29.1
 
 # 开发依赖（本地开发与 CI 使用；构建生产镜像时可不装）

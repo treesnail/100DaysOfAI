@@ -63,9 +63,10 @@ outputs/
 # Local data (large datasets should not be committed)
 data/
 
-# day039 静态评测语料与知识库是测试运行时的必需输入，须随仓库提交。
-# 仅重新纳入 day039 的 data 目录（含 MCP 知识库），其余 data/ 仍忽略。
-!day039/源码/smart-research-agent/data/
-!day039/源码/smart-research-agent/data/**
-!day039/源码/smart-research-agent/smart_research_agent/mcp_server/data/
-!day039/源码/smart-research-agent/smart_research_agent/mcp_server/data/**
+# 各 day 的静态评测语料与知识库是测试运行时的必需输入，须随仓库提交。
+# 仅重新纳入 day*/源码/smart-research-agent 下的 data 目录（含 MCP 知识库），
+# 其余 data/ 仍忽略（大体积数据集不入库）。
+!day*/源码/smart-research-agent/data/
+!day*/源码/smart-research-agent/data/**
+!day*/源码/smart-research-agent/smart_research_agent/mcp_server/data/
+!day*/源码/smart-research-agent/smart_research_agent/mcp_server/data/**

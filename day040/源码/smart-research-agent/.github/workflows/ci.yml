@@ -1,0 +1,55 @@
+# SmartResearch Agent CI 流水线（day032）
+#
+# 触发：push / pull_request。
+# 流水线四级门禁：单元测试（含覆盖率）→ Agent 评估 → 红队评估，
+# 任一失败则本次 CI 标红。评估脚本全程 MockLLM 离线驱动，无需任何密钥。
+#
+# 注意：本文件位于教学快照目录（dayXXX/源码/smart-research-agent/）内，
+# 只有在真实仓库中把本目录作为仓库根（或把 .github/ 移到真实仓库根目录），
+# GitHub 才会真正触发它。详见当日教程第四章。
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install -r requirements.txt
+
+      # 第一级门禁：单元测试 + 分支覆盖率 >= 80%（fail_under 配置在 pyproject.toml，
+      # 覆盖率不达标时 pytest 以非零退出码结束，本步直接失败）
+      - name: Unit tests with coverage gate
+        run: python -m pytest tests/ -q
+
+      # 第二级门禁：Agent 评估通过率
+      - name: Agent evaluation gate
+        run: python scripts/run_agent_eval.py --min-completion-rate 0.6 --min-step-efficiency 0.7
+
+      # 第三级门禁：红队拦截率（已知攻击集必须全拦）
+      - name: Red team gate
+        run: python scripts/run_redteam.py --min-block-rate 1.0
+
+      # 评估报告作为构建产物留存，失败时可下载复盘
+      - name: Upload evaluation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-reports
+          path: data/eval/*.md

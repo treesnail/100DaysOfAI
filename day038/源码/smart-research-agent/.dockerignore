@@ -1,0 +1,42 @@
+# 构建上下文排除清单：这些文件不会进入镜像，减小构建体积、避免泄露敏感信息
+
+# Git 与版本控制
+.git
+.gitignore
+
+# 环境变量（绝不打包密钥）
+.env
+.env.*
+
+# 虚拟环境
+venv/
+.venv/
+
+# Python 缓存与构建产物
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# 测试与覆盖率
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE 与系统文件
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 日志与输出
+logs/
+outputs/
+
+# 本地数据（镜像内不需要训练数据）
+data/
+
+# 文档与说明（运行时不需要）
+docs/
+README.md

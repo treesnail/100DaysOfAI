@@ -1,0 +1,25 @@
+{
+  "label": "day046-pipeline",
+  "samples": 3,
+  "latency_ms": {
+    "total": 0.0576,
+    "guard": 0.0051,
+    "cache": 0.0002,
+    "generate": 0.004,
+    "account": 0.0072,
+    "moderate": 0.004,
+    "store": 0.0003
+  },
+  "p95_latency_ms": {
+    "total": 0.1158,
+    "guard": 0.0062,
+    "cache": 0.0003,
+    "generate": 0.0051,
+    "account": 0.0081,
+    "moderate": 0.0049,
+    "store": 0.0003
+  },
+  "mean_tokens": 3.0,
+  "mean_cost_usd": 9e-07,
+  "mean_stages": 6.0
+}

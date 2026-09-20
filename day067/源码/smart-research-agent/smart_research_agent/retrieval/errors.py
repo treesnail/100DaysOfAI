@@ -1,0 +1,138 @@
+"""检索错误族：分开，因为**修这几族的是几拨不同的人**（M6-D5 / M6-D6）.
+
+day064 的 ``vectorstore.errors`` 也分了族（环境/数据/调用/查询），
+今天这一层沿用同一条纪律，但**分的依据换了一个**：
+向量库那一层按"失败发生在哪"分，检索这一层按"**谁该去修**"分。
+
+```text
+族                 现象                                  谁去修
+QueryError         空查询 / top_k 越界 / 过滤条件冲突 /     调用方（写错了参数）
+                   时间范围倒置 / 路由名不存在 /            → 改调用点，不改库
+                   k1 与 b 取值非法                        → 改调用点或改配置
+IndexStateError    库为空却要求过滤 / 维度不符 /           索引运维（库与配置对不上）
+                   编码器返回坏向量 / 严格模式下清单漂移     → 重建或对齐索引
+ContextError       预算放不下一条命中 / 单块上限为 0 /      打包配置（阈值定得太狠）
+                   提示词模板缺占位符                       → 调预算与模板
+LexicalError       关键词索引与语料对不上（库里报 N 条、    索引运维（索引没跟上语料）
+                   只取回 M 条；索引里的文档全无词元）      → 重建关键词索引 / 修入库口径
+FusionError        融合策略名不存在 / alpha 越界 /          调用方（写错了参数）
+                   k_rrf < 1 / 某一路没有权重               → 改这一次的调用参数
+```
+
+**为什么不合成一个 ``RetrievalError``**：合起来之后，"检索返回 500" 这个现象
+就同时对应三种完全不同的动作——查调用点、重建索引、调预算。而这三件事由不同的人
+在同一天的不同时间做；混成一族之后，接报的人必须先读代码才能判断该找谁。
+
+**day067 新增的两族沿用同一条判据**（不是按"发生在新代码里"分）：
+
+```text
+LexicalError 是 RetrievalError 的直系子类   改调用点是走不通的——关键词索引少了文档，
+                                          只能重建它或修入库口径，所以它不进 QueryError
+FusionError  继承 QueryError                改这一次的调用参数就能走通
+                                          （strategy 拼错、alpha 给了 1.5、k_rrf=0）
+```
+
+``FusionError`` 继承 ``QueryError`` 而不是并列：它描述的就是"这次请求的参数不对"，
+继承之后 ``except QueryError`` 的老代码**自动**把它收进去（端点层那条
+"参数问题一律 400"的通道不需要再加一个分支），而需要区分时又能单独
+``except FusionError``——两边的代价都是零，这正是"子类"该有的用法。
+
+每一族的报错模板（都是"**现象 + 出路**"两句，而不是一个错误码）：
+
+```text
+QueryError        "top_k=0 没有意义 → 要探测'库里有没有数据'请用 backend.count()"
+IndexStateError   "查询向量 384 维、库 768 维 → 编码器与建库的不是同一套，请重建索引"
+ContextError      "一条命中至少需要 32 字，预算只有 20 → 调大 retrieval_max_context_chars"
+LexicalError      "库里报 8 条、只取回 7 条 → 记录表与索引不同步，请重建关键词索引"
+FusionError       "alpha=1.5 越界 → alpha 是**向量通道的权重**，必须落在 [0, 1]"
+```
+
+这几族都**不是**"程序崩了"：它们全是**可预期的拒绝**，因此消息里必须带上出路。
+真正不在预期内的异常（例如某个后端实现里有个 ``TypeError``）**不上抛到本族**——
+那种错误必须让调用栈把它喊出来（与 ``vectorstore.pipeline`` 的同一条纪律）。
+"""
+
+from __future__ import annotations
+
+
+class RetrievalError(Exception):
+    """本包所有错误的基类（``except RetrievalError`` 能一次收全）.
+
+    捕获它的人通常是端点层与演示脚本：它们要把"检索没做成"渲染成一条
+    人类可读的结论。**但端点层绝不该用它兜住内部异常**——
+    这条纪律写在 ``pipeline`` 的那一层，本类只是让"刻意抛出的失败"
+    有一个共同的祖先。
+    """
+
+
+class QueryError(RetrievalError):
+    """调用方的问题：空查询 / top_k 越界 / 过滤条件冲突 / 时间范围倒置 / 路由名不存在.
+
+    判据只有一条：**这条路改调用点就能走通**，不需要动索引、不需要重建库。
+    例如 ``top_k=0``、``{"$and": [{"a": 1}]}`` 里把 ``a`` 同时写成时间字段、
+    ``route="手册库"`` 而这个名从未注册过——这些都是"再问一次就行了"。
+
+    模板：``QueryError("空查询在向量检索里没有定义：请给一段非空文本")``
+    ——现象（空查询）后面**紧跟**出路（给一段非空文本）。
+    """
+
+
+class IndexStateError(RetrievalError):
+    """库侧的问题：库为空却要求过滤、维度不符、编码器返回坏向量、严格模式下清单漂移.
+
+    判据与 ``QueryError`` 互补：**这条路改调用点是走不通的**，
+    必须去动索引（重建、对齐编码器、修清单）。因此把这族单独拿出来，
+    是为了让"检索器说库不对"这件事有一个不会被误读成"我参数写错了"的载体。
+
+    模板：``IndexStateError("查询向量 768 维、本库 384 维：编码器与建库的
+    不是同一套，请用同一个提供方重建索引")``。
+    """
+
+
+class ContextError(RetrievalError):
+    """上下文打包与提示词装配的问题：预算放不下一条命中、单块上限为 0、模板缺占位符.
+
+    这族看着最琐碎，却是唯一一族**只与配置有关**的错误：
+    它跟库、跟查询、跟编码器都无关，只跟"你打算给模型留多少空间"有关
+    （见 ``config.retrieval_max_context_chars`` / ``retrieval_per_hit_chars``）。
+
+    模板：``ContextError("一条命中至少需要 32 字，本预算只给了 20 字：
+    请调大 retrieval_max_context_chars 或降低 min_hit_chars")``。
+    """
+
+
+class LexicalError(RetrievalError):
+    """关键词索引侧的问题：索引里的文档与库里对不上、索引里的文档全无词元.
+
+    day067 新增，判据与 ``IndexStateError`` 完全一致——**改调用点走不通**，
+    只能去动索引。它与 ``IndexStateError`` 并列而不是合并，理由只有一个：
+    出问题时"该重建的是哪一个索引"是接报人的第一个问题，而
+    ``向量库对不上`` 与 ``关键词索引对不上`` 的处置动作不同
+    （重建向量库要走 day065 的 indexing，重建关键词索引只是
+    ``LexicalIndex.from_backend(backend)`` 一次调用）。
+
+    模板：``LexicalError("库里报 8 条、只取回 7 条：记录表与索引不同步，
+    请重建关键词索引（LexicalIndex.from_backend）")``。
+    """
+
+
+class FusionError(QueryError):
+    """融合参数的问题：策略名不存在 / ``alpha`` 越界 / ``k_rrf < 1`` / 某一路没有权重.
+
+    继承 ``QueryError``（见模块 docstring 的说明）：它就是"这次请求的参数不对"，
+    因此（1）``except QueryError`` 能一次收全，（2）端点那条"参数问题一律 400"
+    的通道不必再加一个分支，（3）需要区分时仍可单独 ``except FusionError``。
+
+    模板：``FusionError("alpha=1.5 越界：alpha 是**向量通道的权重**，必须落在 [0, 1]；
+    关键词通道的权重是 1 - alpha，因此给它 1.5 等于给关键词路 -0.5")``。
+    """
+
+
+__all__ = [
+    "ContextError",
+    "FusionError",
+    "IndexStateError",
+    "LexicalError",
+    "QueryError",
+    "RetrievalError",
+]

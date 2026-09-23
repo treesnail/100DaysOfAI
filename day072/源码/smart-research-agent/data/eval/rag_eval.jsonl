@@ -1,0 +1,6 @@
+{"query": "什么是检索增强生成", "relevant_ids": ["rag-001"], "relevance_grades": {"rag-001": 3, "rag-002": 1}, "reference_answer": "检索增强生成（RAG）是把检索与生成结合的架构，先检索相关文档再喂给生成模型。"}
+{"query": "向量检索如何工作", "relevant_ids": ["rag-002", "rag-004"], "relevance_grades": {"rag-002": 3, "rag-004": 2}, "reference_answer": "向量检索把文档和查询编码成向量，用余弦相似度在向量空间做最近邻检索。"}
+{"query": "文档切块的常见策略", "relevant_ids": ["rag-003"], "relevance_grades": {"rag-003": 3}, "reference_answer": "文档切块有固定长度、按段落或标题切分等策略，粒度影响检索与生成质量。"}
+{"query": "Embedding 模型的作用", "relevant_ids": ["rag-004"], "relevance_grades": {"rag-004": 3, "rag-002": 1}, "reference_answer": "Embedding 模型把文本映射为定长向量，语义相近的文本向量距离更近。"}
+{"query": "检索质量有哪些评估指标", "relevant_ids": ["rag-005"], "relevance_grades": {"rag-005": 3}, "reference_answer": "检索质量评估常用召回率、精确率、MRR 与 NDCG 四个指标。"}
+{"query": "如何评估生成答案的忠实度", "relevant_ids": ["rag-006"], "relevance_grades": {"rag-006": 3}, "reference_answer": "生成答案忠实度常用 LLM-as-a-judge，由评审模型对比生成答案与参考答案输出结构化评分。"}

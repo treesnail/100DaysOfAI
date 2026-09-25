@@ -1,0 +1,80 @@
+# 智研 AI 助手 —— RAG 生产化编排（day072 / M6-D10）
+#
+# 本文件由 smart_research_agent.rag_ops.deploy.render_compose() 渲染：
+#   请勿手改。tests/test_rag_ops_deploy.py 会逐字节比对它与默认规格，
+#   手改会当场变红（而不是等下一次部署带着一份没人知道的偏配置上线）。
+# 重新渲染：python scripts/rag_ops_demo.py --write-compose
+#
+# 三个容器：vector-store（向量库）/ rag-api（应用）/ rag-ops-sync（定时同步）。
+# 变更记录：day072 首次交付：三容器编排（向量库 + 应用 + 定时同步）
+name: smart-research-rag
+
+services:
+  rag-api:
+    image: "smart-research-rag-api:v0.1.0"
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ["python", "-m", "uvicorn", "smart_research_agent.api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      LOG_LEVEL: INFO
+      RAG_OPS_LEDGER_PATH: /app/data/ops/sync_ledger.json
+      RAG_OPS_SOURCE_DIR: /app/data/knowledge
+      VECTOR_BACKEND: flat
+      VECTOR_PERSIST_PATH: /app/data/index/vectors.json
+    volumes:
+      - "rag-index:/app/data/index"
+      - "rag-ops-state:/app/data/ops"
+      - "rag-corpus:/app/data/knowledge:ro"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/rag/ops/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+  rag-ops-sync:
+    image: "smart-research-rag-api:v0.1.0"
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ["python", "-m", "smart_research_agent.rag_ops.worker", "--loop", "--interval", "1440"]
+    restart: unless-stopped
+    environment:
+      RAG_OPS_BACKOFF_BASE_SECONDS: 60
+      RAG_OPS_LEDGER_PATH: /app/data/ops/sync_ledger.json
+      RAG_OPS_SOURCE_DIR: /app/data/knowledge
+      VECTOR_BACKEND: flat
+      VECTOR_PERSIST_PATH: /app/data/index/vectors.json
+    volumes:
+      - "rag-index:/app/data/index"
+      - "rag-ops-state:/app/data/ops"
+      - "rag-corpus:/app/data/knowledge"
+  vector-store:
+    image: "chromadb/chroma:1.5.3"
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      ANONYMIZED_TELEMETRY: FALSE
+      IS_PERSISTENT: TRUE
+    volumes:
+      - "chroma-data:/data"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v2/heartbeat"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  chroma-data:
+  rag-corpus:
+  rag-index:
+  rag-ops-state:
+
+networks:
+  rag-net:
+    driver: bridge

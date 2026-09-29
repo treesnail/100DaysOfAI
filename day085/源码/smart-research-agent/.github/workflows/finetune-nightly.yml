@@ -1,0 +1,57 @@
+# 领域微调持续运行（M5-D10 / day059）
+#
+# 本文件由 smart_research_agent.mlops.ci.render_github_actions() 生成，
+# 请勿手工编辑：改门禁阈值请改 ReleaseGates，然后重新生成并提交。
+# 测试 test_mlops_ci.py::test_committed_workflow_matches_the_renderer
+# 会断言仓库里的这一份与渲染器的输出逐字相同。
+#
+# 触发：定时（cron 按 UTC 解释）+ 手动。
+# 与 ci.yml 的分工：ci.yml 管"代码改动有没有破坏现有能力"（事件驱动），
+# 本文件管"这一版产物值不值得上线"（定时驱动）。
+# 失败的含义也因此不同：后者失败不是"代码坏了"，而是"这一版不该发布"。
+
+name: finetune-nightly
+
+on:
+  schedule:
+    - cron: "0 20 * * *"
+  workflow_dispatch:
+
+jobs:
+  finetune-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install -r requirements.txt
+
+      # 第一步门禁：单元测试 + 分支覆盖率（fail_under 配置在 pyproject.toml，
+      # 覆盖率不达标时 pytest 以非零退出码结束，本步直接失败）
+      - name: Unit tests with coverage gate
+        run: python -m pytest tests/ -q
+
+      # 第二步门禁：跑一遍微调流水线并按发布门禁判定。
+      # 阈值全部来自 ReleaseGates，因此它们与代码里的缺省值永远是同一份。
+      - name: Finetune pipeline release gate
+        run: python scripts/mlops_demo.py --min-pass-rate 0.5 --max-adapter-mebibytes 64.0 --max-cost-per-1k-tokens 0.05 --max-regression 0.0
+
+      # 报告作为构建产物留存：失败时的那份报告才是最需要看的东西
+      - name: Upload run and registry artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: finetune-artifacts
+          path: |
+            outputs/mlops/runs.jsonl
+            outputs/registry/versions.jsonl

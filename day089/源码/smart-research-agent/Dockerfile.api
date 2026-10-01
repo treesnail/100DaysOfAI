@@ -1,0 +1,64 @@
+# 智研 AI 助手 —— RAG 应用镜像（day072 / M6-D10）
+#
+# 这一份镜像同时承载两个角色（compose 里的 rag-api 与 rag-ops-sync）：
+# 它们的代码完全相同，差别只在**启动命令**。把"同一个镜像跑两种角色"
+# 写清楚很重要——多一份镜像意味着两份依赖、两次构建、两个可能分家的版本。
+#
+# 与既有的 Dockerfile（day022 的 MCP Server 镜像）的关系：**并存**。
+# 两份镜像的入口、端口与职责都不同，合成一份会让"这个容器到底该起什么"
+# 变成读环境变量才能回答的问题。
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# slim 镜像不带 curl，而 HEALTHCHECK 需要它来探测 /rag/ops/health
+# --no-install-recommends 避免安装建议依赖；清理 apt 缓存减小层体积
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# 先复制依赖文件，利用镜像分层缓存：只要 requirements.txt 不变，依赖层就不重建
+COPY requirements.txt ./
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# 再复制源码（源码变化频繁，放在依赖层之后，避免改代码就重装依赖）
+COPY smart_research_agent/ ./smart_research_agent/
+COPY pyproject.toml ./
+
+RUN pip install --no-cache-dir -e .
+
+# 语料 / 索引 / 账本三个目录都**挂卷**，镜像里只留一层占位目录：
+# 有了它，应用在没有挂卷时（例如 `docker run` 手动试跑）也能启动，
+# 而挂上卷之后，这三条路径就是 compose 里那三个命名卷的挂载点。
+RUN mkdir -p /app/data/knowledge /app/data/index /app/data/ops
+
+# 环境变量注入（十二要素：配置存环境，不写死在代码里）。
+# 这里的三个路径**必须与 docker-compose.rag.yml 里的挂载点逐字一致**：
+# 不一致的后果是"应用往容器自己的可写层写账本"——能跑，但容器一重建就丢。
+ENV PYTHONUNBUFFERED=1 \
+    LOG_LEVEL=INFO \
+    VECTOR_BACKEND=flat \
+    VECTOR_PERSIST_PATH=/app/data/index/vectors.json \
+    RAG_OPS_SOURCE_DIR=/app/data/knowledge \
+    RAG_OPS_LEDGER_PATH=/app/data/ops/sync_ledger.json
+
+# 声明 HTTP 端口（文档性声明，实际映射由 compose 的 ports 决定）
+EXPOSE 8080
+
+# 非 root 用户运行，降低安全风险
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
+
+# 健康检查：与 compose 里的 healthcheck 同一条命令、同一份参数。
+# 它探的是 /rag/ops/health（"这个实例还能不能服务知识库问题"），
+# 而不是 /health（"进程还活着"）——容器编排关心的是前者。
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -f http://localhost:8080/rag/ops/health || exit 1
+
+# 默认以 uvicorn 的 factory 模式启动 API。
+# **不用 `python -m smart_research_agent.api.app`**：那个入口绑 127.0.0.1，
+# 在容器里宿主机的端口转发一个包都进不来（见 rag_ops/deploy.py 的 API_COMMAND）。
+CMD ["python", "-m", "uvicorn", "smart_research_agent.api.app:create_app", \
+     "--factory", "--host", "0.0.0.0", "--port", "8080"]
